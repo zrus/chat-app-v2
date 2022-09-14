@@ -62,17 +62,24 @@ impl TPeer for Bootstrap {
             }
             SwarmEvent::Behaviour(Event::Identify(event)) => {
                 info!("{:?}", event);
-                if let IdentifyEvent::Received { peer_id, info: IdentifyInfo { listen_addrs, protocols, .. } } = event {
+                if let IdentifyEvent::Received { peer_id, info: IdentifyInfo { ref listen_addrs, ref protocols, .. } } = event {
                   if protocols
                     .iter()
                     .any(|p| p.as_bytes() == libp2p::kad::protocol::DEFAULT_PROTO_NAME)
                   {
-                    for addr in listen_addrs {
+                    for addr in listen_addrs.iter().cloned() {
                       self.swarm
                         .behaviour_mut()
                         .kademlia
                         .add_address(&peer_id, addr);
                     }
+                  }
+
+                  if listen_addrs
+                    .iter()
+                    .any(|address| address.iter().any(|p| p == Protocol::P2pCircuit))
+                  {
+                    println!("{:?}", event);
                   }
                 };
             }
@@ -135,24 +142,22 @@ impl TBuilder for BootstrapBuilder {
       .into_authentic(&local_key)
       .expect("Signing libp2p-noise static DH keypair failed.");
 
-    let yamux_config = {
-      let mut config = YamuxConfig::default();
-      config.set_max_buffer_size(16 * 1024 * 1024);
-      config.set_receive_window_size(16 * 1024 * 1024);
-      config.set_window_update_mode(WindowUpdateMode::on_receive());
-      config
-    };
+    // let yamux_config = {
+    //   let mut config = YamuxConfig::default();
+    //   config.set_max_buffer_size(16 * 1024 * 1024);
+    //   config.set_receive_window_size(16 * 1024 * 1024);
+    //   config.set_window_update_mode(WindowUpdateMode::on_receive());
+    //   config
+    // };
 
-    let multiplex_upgrade = SelectUpgrade::new(yamux_config, MplexConfig::new());
+    // let multiplex_upgrade = SelectUpgrade::new(yamux_config, MplexConfig::new());
 
     let transport = TokioTcpTransport::new(GenTcpConfig::default().nodelay(true));
     let transport = DnsConfig::system(transport).await?;
     let transport = transport
       .upgrade(upgrade::Version::V1)
       .authenticate(noise::NoiseConfig::xx(noise_keys).into_authenticated())
-      .multiplex(multiplex_upgrade)
-      .map(|(peer_id, muxer), _| (peer_id, StreamMuxerBox::new(muxer)))
-      .map_err(|err| Error::new(ErrorKind::Other, err))
+      .multiplex(libp2p::yamux::YamuxConfig::default())
       .boxed();
 
     let mut config = KademliaConfig::default();
