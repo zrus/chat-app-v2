@@ -1,0 +1,19 @@
+[package]
+name = "actor-model"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bastion = { version = "*", features = ["tokio-runtime"] }
+cqrs-es = "*"
+tokio = { version = "*", features = ["full"] }
+tokio-util = { version = "*", features = ["full"] }
+anyhow = "*"
+clap = { version = "*", features = ["derive"]}
+log4rs = "*"
+log = "*"
+chrono = "*"
+async-trait = "*"
+libp2p = { version = "*", features = ["dcutr", "tcp-tokio", "dns-tokio", "mdns-tokio"] }
