@@ -6,6 +6,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use libp2p::core::muxing::StreamMuxerBox;
 use libp2p::core::upgrade::{self, SelectUpgrade};
+use libp2p::dns::DnsConfig;
 use libp2p::futures::StreamExt;
 use libp2p::identify::{Identify, IdentifyConfig, IdentifyEvent, IdentifyInfo};
 use libp2p::identity::Keypair;
@@ -144,13 +145,16 @@ impl TBuilder for BootstrapBuilder {
 
     let multiplex_upgrade = SelectUpgrade::new(yamux_config, MplexConfig::new());
 
-    let transport = TokioTcpTransport::new(GenTcpConfig::default().nodelay(true))
+    let transport = TokioTcpTransport::new(GenTcpConfig::default().nodelay(true));
+    let transport = DnsConfig::system(transport).await?;
+    let transport = transport
       .upgrade(upgrade::Version::V1)
       .authenticate(noise::NoiseConfig::xx(noise_keys).into_authenticated())
       .multiplex(multiplex_upgrade)
       .map(|(peer_id, muxer), _| (peer_id, StreamMuxerBox::new(muxer)))
       .map_err(|err| Error::new(ErrorKind::Other, err))
       .boxed();
+
     let mut config = KademliaConfig::default();
     config
       .set_query_timeout(Duration::from_secs(10))
