@@ -40,11 +40,10 @@ pub struct Bootstrap {
 #[async_trait]
 impl TPeer for Bootstrap {
   async fn run(&mut self) -> Result<()> {
-    self.swarm.listen_on(
-      Multiaddr::empty()
-        .with("0.0.0.0".parse::<Ipv4Addr>().unwrap().into())
-        .with(Protocol::Tcp(4003)),
-    )?;
+    let listen_addr = Multiaddr::empty()
+      .with(Protocol::from(Ipv4Addr::UNSPECIFIED))
+      .with(Protocol::Tcp(4003));
+    self.swarm.listen_on(listen_addr)?;
 
     let sleep = tokio::time::sleep(BOOTSTRAP_INTERVAL);
     tokio::pin!(sleep);
@@ -58,37 +57,40 @@ impl TPeer for Bootstrap {
         event = self.swarm.select_next_some() => {
           match event {
             SwarmEvent::NewListenAddr { address, .. } => {
-                info!("Listening on {:?}", address);
+              info!("Listening on {:?}", address);
+            }
+            SwarmEvent::Behaviour(Event::Relay(event)) => {
+              info!("{:?}", event)
             }
             SwarmEvent::Behaviour(Event::Identify(event)) => {
-                info!("{:?}", event);
-                if let IdentifyEvent::Received { peer_id, info: IdentifyInfo { ref listen_addrs, ref protocols, .. } } = event {
-                  if protocols
-                    .iter()
-                    .any(|p| p.as_bytes() == libp2p::kad::protocol::DEFAULT_PROTO_NAME)
-                  {
-                    for addr in listen_addrs.iter().cloned() {
-                      self.swarm
-                        .behaviour_mut()
-                        .kademlia
-                        .add_address(&peer_id, addr);
-                    }
+              info!("{:?}", event);
+              if let IdentifyEvent::Received { peer_id, info: IdentifyInfo { ref listen_addrs, ref protocols, .. } } = event {
+                if protocols
+                  .iter()
+                  .any(|p| p.as_bytes() == libp2p::kad::protocol::DEFAULT_PROTO_NAME)
+                {
+                  for addr in listen_addrs.iter().cloned() {
+                    self.swarm
+                      .behaviour_mut()
+                      .kademlia
+                      .add_address(&peer_id, addr);
                   }
+                }
 
-                  if listen_addrs
-                    .iter()
-                    .any(|address| address.iter().any(|p| p == Protocol::P2pCircuit))
-                  {
-                    println!("{:?}", event);
-                  }
-                };
+                if listen_addrs
+                  .iter()
+                  .any(|address| address.iter().any(|p| p == Protocol::P2pCircuit))
+                {
+                  println!("{:?}", event);
+                }
+              };
             }
             SwarmEvent::Behaviour(Event::Ping(_)) => {}
             SwarmEvent::Behaviour(Event::Autonat(e)) => {
               info!("{e:?}");
             }
             SwarmEvent::ConnectionEstablished {
-                peer_id, endpoint, ..
+              peer_id, endpoint, ..
             } => {
               info!("Established connection to {:?} via {:?}", peer_id, endpoint);
             }

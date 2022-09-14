@@ -54,7 +54,7 @@ impl TPeer for Peer {
             SwarmEvent::NewListenAddr { address, .. } => {
               info!("Listening on {:?}", address);
             }
-            event => info!("{:?}", event),
+            event => debug!("{:?}", event),
           }
         }
         _ = tokio::time::sleep(Duration::from_secs(1)) => {
@@ -64,9 +64,9 @@ impl TPeer for Peer {
       }
     }
 
-    self
-      .swarm
-      .dial(format!("{}/p2p/{}", BOOTSTRAP_ADDRESS, BOOT_NODES[0]).parse::<Multiaddr>()?)?;
+    let dial_addr = format!("{}/p2p/{}", BOOTSTRAP_ADDRESS, BOOT_NODES[0]).parse::<Multiaddr>()?;
+    info!("Dial addr: {dial_addr}");
+    self.swarm.dial(dial_addr.clone())?;
     let mut learned_observed_addr = false;
     let mut told_relay_observed_addr = false;
 
@@ -87,13 +87,27 @@ impl TPeer for Peer {
           info!("Relay told us our public address: {:?}", observed_addr);
           learned_observed_addr = true;
         }
-        event => info!("{:?}", event),
+        event => debug!("{:?}", event),
       }
 
       if learned_observed_addr && told_relay_observed_addr {
         break;
       }
     }
+
+    self
+      .swarm
+      .listen_on(dial_addr.with(Protocol::P2pCircuit))
+      .unwrap();
+
+    for peer in BOOT_NODES {
+      self.swarm.behaviour_mut().kademlia.add_address(
+        &PeerId::from_str(peer)?,
+        BOOTSTRAP_ADDRESS.parse::<Multiaddr>()?,
+      );
+    }
+
+    self.swarm.behaviour_mut().kademlia.bootstrap()?;
 
     let mut stdin = tokio::io::BufReader::new(tokio::io::stdin()).lines();
 
@@ -174,7 +188,7 @@ impl TPeer for Peer {
                 }
             }
             SwarmEvent::Behaviour(Event::Ping(e)) => {
-              warn!("Ping: {e:?}");
+              debug!("Ping: {e:?}");
             }
             SwarmEvent::ConnectionEstablished {
                 peer_id, endpoint, ..
@@ -274,7 +288,7 @@ impl TBuilder for PeerBuilder {
     let store = MemoryStore::new(local_peer_id);
     let kademlia = Kademlia::with_config(local_peer_id, store, config);
 
-    let mut behaviour = PeerBehaviour {
+    let behaviour = PeerBehaviour {
       client,
       ping: Ping::new(PingConfig::default().with_keep_alive(true)),
       identify: Identify::new(IdentifyConfig::new(
@@ -286,15 +300,6 @@ impl TBuilder for PeerBuilder {
       // mdns,
       kademlia,
     };
-
-    for peer in BOOT_NODES {
-      behaviour.kademlia.add_address(
-        &PeerId::from_str(peer)?,
-        BOOTSTRAP_ADDRESS.parse::<Multiaddr>()?,
-      );
-    }
-
-    behaviour.kademlia.bootstrap()?;
 
     let swarm = SwarmBuilder::new(transport, behaviour, local_peer_id)
       .executor(Box::new(|fut| {
