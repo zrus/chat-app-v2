@@ -75,23 +75,23 @@ impl TPeer for Peer {
             SwarmEvent::NewListenAddr { address, .. } => {
               info!("Listening on {:?}", address);
             }
-            SwarmEvent::Behaviour(Event::Mdns(event)) => {
-              debug!("{event:?}");
-              match event {
-                MdnsEvent::Discovered(list) => {
-                  for (peer, _) in list {
-                    self.swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer);
-                  }
-                }
-                MdnsEvent::Expired(list) => {
-                  for (peer, _) in list {
-                    if !self.swarm.behaviour().mdns.has_node(&peer) {
-                      self.swarm.behaviour_mut().gossipsub.remove_explicit_peer(&peer);
-                    }
-                  }
-                }
-              }
-            },
+            // SwarmEvent::Behaviour(Event::Mdns(event)) => {
+            //   debug!("{event:?}");
+            //   match event {
+            //     MdnsEvent::Discovered(list) => {
+            //       for (peer, _) in list {
+            //         self.swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer);
+            //       }
+            //     }
+            //     MdnsEvent::Expired(list) => {
+            //       for (peer, _) in list {
+            //         if !self.swarm.behaviour().mdns.has_node(&peer) {
+            //           self.swarm.behaviour_mut().gossipsub.remove_explicit_peer(&peer);
+            //         }
+            //       }
+            //     }
+            //   }
+            // },
             SwarmEvent::Behaviour(Event::Client(client::Event::ReservationReqAccepted {
                 ..
             })) => {
@@ -197,11 +197,12 @@ impl TBuilder for PeerBuilder {
     let topic = gossipsub::IdentTopic::new("chat");
 
     // Set mDNS
-    let mdns = TokioMdns::new(Default::default()).await?;
+    // let mdns = TokioMdns::new(Default::default()).await?;
 
     // Set a custom gossipsub
     let gossipsub_config = gossipsub::GossipsubConfigBuilder::default()
       .heartbeat_interval(std::time::Duration::from_secs(10)) // This is set to aid debugging by not cluttering the log space
+      .flood_publish(true)
       .support_floodsub()
       .validation_mode(ValidationMode::Strict) // This sets the kind of message validation. The default is Strict (enforce message signing)
       .build()
@@ -234,7 +235,7 @@ impl TBuilder for PeerBuilder {
       )),
       dcutr: dcutr::behaviour::Behaviour::new(),
       gossipsub,
-      mdns,
+      // mdns,
       kademlia,
     };
 
