@@ -147,6 +147,7 @@ impl TBuilder for BootstrapBuilder {
     let mut config = KademliaConfig::default();
     config
       .set_query_timeout(Duration::from_secs(10))
+      .set_connection_idle_timeout(Duration::from_secs(10))
       .set_record_ttl(Some(Duration::from_secs(60)))
       .set_publication_interval(Some(Duration::from_secs(30)))
       .set_provider_record_ttl(Some(Duration::from_secs(20)))
