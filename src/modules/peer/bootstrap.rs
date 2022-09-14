@@ -82,10 +82,17 @@ impl TPeer for Bootstrap {
             SwarmEvent::ConnectionEstablished {
                 peer_id, endpoint, ..
             } => {
-                info!("Established connection to {:?} via {:?}", peer_id, endpoint);
+              info!("Established connection to {:?} via {:?}", peer_id, endpoint);
+            }
+            SwarmEvent::ConnectionClosed { peer_id, cause, .. } => {
+              info!("Connection to {peer_id} closed due to: {cause:?}");
+              self.swarm.behaviour_mut().kademlia.remove_peer(&peer_id);
             }
             SwarmEvent::OutgoingConnectionError { peer_id, error } => {
-                error!("Outgoing connection error to {:?}: {:?}", peer_id, error);
+              error!("Outgoing connection error to {:?} due to: {:?}", peer_id, error);
+              if let Some(peer_id) = peer_id {
+                self.swarm.behaviour_mut().kademlia.remove_peer(&peer_id);
+              }
             }
             event => debug!("Other: {event:?}"),
           }
@@ -148,10 +155,10 @@ impl TBuilder for BootstrapBuilder {
     config
       .set_query_timeout(Duration::from_secs(10))
       .set_connection_idle_timeout(Duration::from_secs(10))
-      .set_record_ttl(Some(Duration::from_secs(60)))
-      .set_publication_interval(Some(Duration::from_secs(30)))
-      .set_provider_record_ttl(Some(Duration::from_secs(20)))
-      .set_provider_publication_interval(Some(Duration::from_secs(10)));
+      .set_record_ttl(Some(Duration::from_secs(120)))
+      .set_publication_interval(Some(Duration::from_secs(90)))
+      .set_provider_record_ttl(Some(Duration::from_secs(60)))
+      .set_provider_publication_interval(Some(Duration::from_secs(30)));
     let store = MemoryStore::new(local_peer_id);
     let kademlia = Kademlia::with_config(local_peer_id, store, config);
 
