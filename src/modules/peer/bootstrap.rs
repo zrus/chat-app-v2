@@ -1,6 +1,5 @@
 use std::io::{Error, ErrorKind};
 use std::net::Ipv4Addr;
-use std::str::FromStr;
 use std::time::Duration;
 
 use anyhow::Result;
@@ -25,7 +24,6 @@ use libp2p::Transport;
 use log::{debug, error, info};
 use tokio::time::Instant;
 
-use crate::constants::{BOODSTRAP_ADDRESS, BOOT_NODES};
 use crate::peer::event::Event;
 use crate::traits::peer::{TBuilder, TPeer};
 
@@ -123,6 +121,8 @@ impl TBuilder for BootstrapBuilder {
     let local_key = self.local_key.as_ref().unwrap();
     let local_peer_id = self.local_peer_id.unwrap();
 
+    info!("Local peer id: {local_peer_id}");
+
     let noise_keys = noise::Keypair::<noise::X25519Spec>::new()
       .into_authentic(&local_key)
       .expect("Signing libp2p-noise static DH keypair failed.");
@@ -152,7 +152,7 @@ impl TBuilder for BootstrapBuilder {
     let store = MemoryStore::new(local_peer_id);
     let kademlia = Kademlia::with_config(local_peer_id, store, config);
 
-    let mut behaviour = BootstrapBehaviour {
+    let behaviour = BootstrapBehaviour {
       relay: Relay::new(PeerId::from(local_key.public()), Default::default()),
       ping: Ping::new(PingConfig::default().with_keep_alive(true)),
       identify: Identify::new(IdentifyConfig::new(
@@ -161,15 +161,6 @@ impl TBuilder for BootstrapBuilder {
       )),
       kademlia,
     };
-
-    for peer in BOOT_NODES {
-      behaviour.kademlia.add_address(
-        &PeerId::from_str(peer)?,
-        BOODSTRAP_ADDRESS.parse::<Multiaddr>()?,
-      );
-    }
-
-    behaviour.kademlia.bootstrap()?;
 
     let swarm = SwarmBuilder::new(transport, behaviour, local_peer_id)
       .executor(Box::new(|fut| {
