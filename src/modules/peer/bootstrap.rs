@@ -147,8 +147,10 @@ impl TBuilder for BootstrapBuilder {
     let mut config = KademliaConfig::default();
     config
       .set_query_timeout(Duration::from_secs(10))
-      .set_record_ttl(Some(Duration::from_secs(30)))
-      .set_provider_record_ttl(Some(Duration::from_secs(20)));
+      .set_record_ttl(Some(Duration::from_secs(60)))
+      .set_publication_interval(Some(Duration::from_secs(30)))
+      .set_provider_record_ttl(Some(Duration::from_secs(20)))
+      .set_provider_publication_interval(Some(Duration::from_secs(10)));
     let store = MemoryStore::new(local_peer_id);
     let kademlia = Kademlia::with_config(local_peer_id, store, config);
 
