@@ -6,6 +6,5 @@ pub const LOG_DEBUG_PATTERN: &str =
 
 // BOOTSTRAP CONSTANTS
 // *TODO: move to config file
-pub const BOODSTRAP_ADDRESS: &str =
-  "/ip4/3.19.56.240/tcp/4003/p2p/12D3KooWDfVV2caaXhXPsZti1wyZPtBj7kckpQ62oSCS3vxJuzyY";
+pub const BOOTSTRAP_ADDRESS: &str = "/ip4/3.19.56.240/tcp/4003";
 pub const BOOT_NODES: &[&str] = &["12D3KooWDfVV2caaXhXPsZti1wyZPtBj7kckpQ62oSCS3vxJuzyY"];

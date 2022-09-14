@@ -26,7 +26,7 @@ use libp2p::Transport;
 use log::{debug, error, info, warn};
 use tokio::io::AsyncBufReadExt;
 
-use crate::constants::{BOODSTRAP_ADDRESS, BOOT_NODES};
+use crate::constants::{BOOTSTRAP_ADDRESS, BOOT_NODES};
 use crate::modules::peer::event::Event;
 use crate::traits::peer::{TBuilder, TPeer};
 
@@ -41,38 +41,37 @@ pub struct Peer {
 #[async_trait]
 impl TPeer for Peer {
   async fn run(&mut self) -> Result<()> {
-    self
-      .swarm
-      .listen_on(
-        Multiaddr::empty()
-          .with("0.0.0.0".parse::<Ipv4Addr>().unwrap().into())
-          .with(Protocol::Tcp(0)),
-      )
-      .unwrap();
+    self.swarm.listen_on(
+      Multiaddr::empty()
+        .with("0.0.0.0".parse::<Ipv4Addr>().unwrap().into())
+        .with(Protocol::Tcp(0)),
+    )?;
 
     loop {
       tokio::select! {
-          event = self.swarm.next() => {
-              match event.unwrap() {
-                  SwarmEvent::NewListenAddr { address, .. } => {
-                      info!("Listening on {:?}", address);
-                  }
-                  event => panic!("{:?}", event),
-              }
+        event = self.swarm.select_next_some() => {
+          match event {
+            SwarmEvent::NewListenAddr { address, .. } => {
+              info!("Listening on {:?}", address);
+            }
+            event => info!("{:?}", event),
           }
-          _ = tokio::time::sleep(Duration::from_secs(1)) => {
-              // Likely listening on all interfaces now, thus continuing by breaking the loop.
-              break;
-          }
+        }
+        _ = tokio::time::sleep(Duration::from_secs(1)) => {
+          // Likely listening on all interfaces now, thus continuing by breaking the loop.
+          break;
+        }
       }
     }
 
-    self.swarm.dial(BOODSTRAP_ADDRESS.parse::<Multiaddr>()?)?;
+    self
+      .swarm
+      .dial(format!("{}/p2p/{}", BOOTSTRAP_ADDRESS, BOOT_NODES[0]).parse::<Multiaddr>()?)?;
     let mut learned_observed_addr = false;
     let mut told_relay_observed_addr = false;
 
     loop {
-      match self.swarm.next().await.unwrap() {
+      match self.swarm.select_next_some().await {
         SwarmEvent::NewListenAddr { .. } => {}
         SwarmEvent::Dialing { .. } => {}
         SwarmEvent::ConnectionEstablished { .. } => {}
@@ -88,7 +87,7 @@ impl TPeer for Peer {
           info!("Relay told us our public address: {:?}", observed_addr);
           learned_observed_addr = true;
         }
-        event => panic!("{:?}", event),
+        event => info!("{:?}", event),
       }
 
       if learned_observed_addr && told_relay_observed_addr {
@@ -291,7 +290,7 @@ impl TBuilder for PeerBuilder {
     for peer in BOOT_NODES {
       behaviour.kademlia.add_address(
         &PeerId::from_str(peer)?,
-        BOODSTRAP_ADDRESS.parse::<Multiaddr>()?,
+        BOOTSTRAP_ADDRESS.parse::<Multiaddr>()?,
       );
     }
 
