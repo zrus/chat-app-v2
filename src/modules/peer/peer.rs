@@ -50,6 +50,52 @@ impl TPeer for Peer {
       )
       .unwrap();
 
+    loop {
+      tokio::select! {
+          event = self.swarm.next() => {
+              match event.unwrap() {
+                  SwarmEvent::NewListenAddr { address, .. } => {
+                      info!("Listening on {:?}", address);
+                  }
+                  event => panic!("{:?}", event),
+              }
+          }
+          _ = tokio::time::sleep(Duration::from_secs(1)) => {
+              // Likely listening on all interfaces now, thus continuing by breaking the loop.
+              break;
+          }
+      }
+    }
+
+    self.swarm.dial(BOODSTRAP_ADDRESS.parse::<Multiaddr>()?)?;
+    let mut learned_observed_addr = false;
+    let mut told_relay_observed_addr = false;
+
+    loop {
+      match self.swarm.next().await.unwrap() {
+        SwarmEvent::NewListenAddr { .. } => {}
+        SwarmEvent::Dialing { .. } => {}
+        SwarmEvent::ConnectionEstablished { .. } => {}
+        SwarmEvent::Behaviour(Event::Ping(_)) => {}
+        SwarmEvent::Behaviour(Event::Identify(IdentifyEvent::Sent { .. })) => {
+          info!("Told relay its public address.");
+          told_relay_observed_addr = true;
+        }
+        SwarmEvent::Behaviour(Event::Identify(IdentifyEvent::Received {
+          info: IdentifyInfo { observed_addr, .. },
+          ..
+        })) => {
+          info!("Relay told us our public address: {:?}", observed_addr);
+          learned_observed_addr = true;
+        }
+        event => panic!("{:?}", event),
+      }
+
+      if learned_observed_addr && told_relay_observed_addr {
+        break;
+      }
+    }
+
     let mut stdin = tokio::io::BufReader::new(tokio::io::stdin()).lines();
 
     loop {
