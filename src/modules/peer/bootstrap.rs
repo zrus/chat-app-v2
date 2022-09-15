@@ -96,13 +96,13 @@ impl TPeer for Bootstrap {
             }
             SwarmEvent::ConnectionClosed { peer_id, cause, .. } => {
               info!("Connection to {peer_id} closed due to: {cause:?}");
-              self.swarm.behaviour_mut().kademlia.remove_peer(&peer_id);
+              // self.swarm.behaviour_mut().kademlia.remove_peer(&peer_id);
             }
             SwarmEvent::OutgoingConnectionError { peer_id, error } => {
               error!("Outgoing connection error to {:?} due to: {:?}", peer_id, error);
-              if let Some(peer_id) = peer_id {
-                self.swarm.behaviour_mut().kademlia.remove_peer(&peer_id);
-              }
+              // if let Some(peer_id) = peer_id {
+              //   self.swarm.behaviour_mut().kademlia.remove_peer(&peer_id);
+              // }
             }
             event => debug!("Other: {event:?}"),
           }
