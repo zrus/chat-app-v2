@@ -168,6 +168,7 @@ impl TBuilder for BootstrapBuilder {
       .set_connection_idle_timeout(Duration::from_secs(10))
       .set_record_ttl(Some(Duration::from_secs(120)))
       .set_publication_interval(None)
+      .set_replication_interval(None)
       .set_provider_record_ttl(Some(Duration::from_secs(120)))
       .set_provider_publication_interval(None);
     let store = MemoryStore::new(local_peer_id);
