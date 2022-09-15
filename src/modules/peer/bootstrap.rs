@@ -1,5 +1,6 @@
 use std::io::{Error, ErrorKind};
 use std::net::Ipv4Addr;
+use std::str::FromStr;
 use std::time::Duration;
 
 use anyhow::Result;
@@ -8,6 +9,7 @@ use libp2p::core::muxing::StreamMuxerBox;
 use libp2p::core::upgrade::{self, SelectUpgrade};
 use libp2p::dns::DnsConfig;
 use libp2p::futures::StreamExt;
+use libp2p::gossipsub::{Gossipsub, GossipsubConfig, MessageAuthenticity};
 use libp2p::identify::{Identify, IdentifyConfig, IdentifyEvent, IdentifyInfo};
 use libp2p::identity::Keypair;
 use libp2p::kad::{store::MemoryStore, Kademlia, KademliaConfig};
@@ -25,6 +27,7 @@ use libp2p::Transport;
 use log::{debug, error, info};
 use tokio::time::Instant;
 
+use crate::constants::{PUBLIC_BOOTNODES, PUBLIC_BOOT_ADDR};
 use crate::peer::event::Event;
 use crate::traits::peer::{TBuilder, TPeer};
 
@@ -172,7 +175,21 @@ impl TBuilder for BootstrapBuilder {
       .set_provider_record_ttl(Some(Duration::from_secs(120)))
       .set_provider_publication_interval(None);
     let store = MemoryStore::new(local_peer_id);
-    let kademlia = Kademlia::with_config(local_peer_id, store, config);
+    let mut kademlia = Kademlia::with_config(local_peer_id, store, config);
+
+    for peer in PUBLIC_BOOTNODES {
+      kademlia.add_address(
+        &PeerId::from_str(peer).unwrap(),
+        PUBLIC_BOOT_ADDR.parse::<Multiaddr>()?,
+      );
+    }
+    kademlia.bootstrap()?;
+
+    let gossipsub = Gossipsub::new(
+      MessageAuthenticity::Signed(local_key.clone()),
+      GossipsubConfig::default(),
+    )
+    .expect("Valid config");
 
     let behaviour = BootstrapBehaviour {
       relay: Relay::new(PeerId::from(local_key.public()), Default::default()),
@@ -182,6 +199,7 @@ impl TBuilder for BootstrapBuilder {
         local_key.public(),
       )),
       kademlia,
+      gossipsub,
     };
 
     let swarm = SwarmBuilder::new(transport, behaviour, local_peer_id)

@@ -26,7 +26,7 @@ use libp2p::Transport;
 use log::{debug, error, info, warn};
 use tokio::io::AsyncBufReadExt;
 
-use crate::constants::{BOOTSTRAP_ADDRESS, BOOT_NODES};
+use crate::constants::{BOOTSTRAP_ADDRESS, BOOTNODES};
 use crate::modules::peer::event::Event;
 use crate::traits::peer::{TBuilder, TPeer};
 
@@ -64,7 +64,7 @@ impl TPeer for Peer {
       }
     }
 
-    let dial_addr = format!("{}/p2p/{}", BOOTSTRAP_ADDRESS, BOOT_NODES[0]).parse::<Multiaddr>()?;
+    let dial_addr = format!("{}/p2p/{}", BOOTSTRAP_ADDRESS, BOOTNODES[0]).parse::<Multiaddr>()?;
     info!("Dial addr: {dial_addr}");
     self.swarm.dial(dial_addr.clone())?;
     let mut learned_observed_addr = false;
@@ -100,7 +100,7 @@ impl TPeer for Peer {
       .listen_on(dial_addr.with(Protocol::P2pCircuit))
       .unwrap();
 
-    for peer in BOOT_NODES {
+    for peer in BOOTNODES {
       self.swarm.behaviour_mut().kademlia.add_address(
         &PeerId::from_str(peer)?,
         BOOTSTRAP_ADDRESS.parse::<Multiaddr>()?,

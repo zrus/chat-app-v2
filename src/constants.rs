@@ -7,4 +7,13 @@ pub const LOG_DEBUG_PATTERN: &str =
 // BOOTSTRAP CONSTANTS
 // *TODO: move to config file
 pub const BOOTSTRAP_ADDRESS: &str = "/ip4/3.19.56.240/tcp/4003";
-pub const BOOT_NODES: &[&str] = &["12D3KooWDfVV2caaXhXPsZti1wyZPtBj7kckpQ62oSCS3vxJuzyY"];
+pub const BOOTNODES: &[&str] = &["12D3KooWDfVV2caaXhXPsZti1wyZPtBj7kckpQ62oSCS3vxJuzyY"];
+
+// DEFAULT BOOTNODES
+pub const PUBLIC_BOOTNODES: &[&str] = &[
+  "QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN",
+  "QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa",
+  "QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb",
+  "QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt",
+];
+pub const PUBLIC_BOOT_ADDR: &str = "/dnsaddr/bootstrap.libp2p.io";
