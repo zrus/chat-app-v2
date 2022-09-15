@@ -23,7 +23,7 @@ use libp2p::tcp::{GenTcpConfig, TokioTcpTransport};
 use libp2p::Multiaddr;
 use libp2p::PeerId;
 use libp2p::Transport;
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 use tokio::time::Instant;
 
 use super::super::helper::generate_ed25519;
@@ -44,19 +44,15 @@ impl TPeer for Bootstrap {
       .with(Protocol::Tcp(self.port));
     self.swarm.listen_on(listen_addr)?;
 
-    info!("{boot_nodes:?}");
     for (idx, peer) in boot_nodes.iter().enumerate() {
-      info!("{peer}");
-      warn!("{}", format!("{BOOTSTRAP_ADDRESS}/{}", PORTS[idx]));
       self.swarm.behaviour_mut().kademlia.add_address(
         &PeerId::from_str(peer)?,
         format!("{BOOTSTRAP_ADDRESS}/{}", PORTS[idx]).parse::<Multiaddr>()?,
       );
-      info!("{peer}");
     }
     match self.swarm.behaviour_mut().kademlia.bootstrap() {
-      Ok(_) => info!("bootstrapped!"),
-      Err(_) => info!("no known servers"),
+      Ok(_) => info!("Bootstrapped!"),
+      Err(_) => info!("No known servers"),
     }
 
     let sleep = tokio::time::sleep(BOOTSTRAP_INTERVAL);
