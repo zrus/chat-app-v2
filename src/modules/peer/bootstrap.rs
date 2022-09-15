@@ -44,13 +44,18 @@ impl TPeer for Bootstrap {
       .with(Protocol::Tcp(self.port));
     self.swarm.listen_on(listen_addr)?;
 
+    info!("{boot_nodes:?}");
     for (idx, peer) in boot_nodes.iter().enumerate() {
+      info!("{peer}");
       self.swarm.behaviour_mut().kademlia.add_address(
         &PeerId::from_str(peer)?,
         format!("{BOOTSTRAP_ADDRESS}/{}", PORTS[idx]).parse::<Multiaddr>()?,
       );
     }
-    let _ = self.swarm.behaviour_mut().kademlia.bootstrap();
+    match self.swarm.behaviour_mut().kademlia.bootstrap() {
+      Ok(_) => info!("bootstrapped!"),
+      Err(_) => info!("no known servers"),
+    }
 
     let sleep = tokio::time::sleep(BOOTSTRAP_INTERVAL);
     tokio::pin!(sleep);
