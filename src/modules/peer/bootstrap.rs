@@ -23,7 +23,7 @@ use libp2p::tcp::{GenTcpConfig, TokioTcpTransport};
 use libp2p::Multiaddr;
 use libp2p::PeerId;
 use libp2p::Transport;
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use tokio::time::Instant;
 
 use super::super::helper::generate_ed25519;
@@ -47,6 +47,7 @@ impl TPeer for Bootstrap {
     info!("{boot_nodes:?}");
     for (idx, peer) in boot_nodes.iter().enumerate() {
       info!("{peer}");
+      warn!("{}", format!("{BOOTSTRAP_ADDRESS}/{}", PORTS[idx]));
       self.swarm.behaviour_mut().kademlia.add_address(
         &PeerId::from_str(peer)?,
         format!("{BOOTSTRAP_ADDRESS}/{}", PORTS[idx]).parse::<Multiaddr>()?,
