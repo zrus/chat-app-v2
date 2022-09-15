@@ -64,7 +64,7 @@ impl TPeer for Peer {
       }
     }
 
-    let dial_addr = format!("{}/p2p/{}", BOOTSTRAP_ADDRESS, BOOTNODES[0]).parse::<Multiaddr>()?;
+    let dial_addr = format!("{}/4003/p2p/{}", BOOTSTRAP_ADDRESS, BOOTNODES[0]).parse::<Multiaddr>()?;
     info!("Dial addr: {dial_addr}");
     self.swarm.dial(dial_addr.clone())?;
     let mut learned_observed_addr = false;
