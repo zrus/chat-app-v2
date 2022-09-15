@@ -2,7 +2,7 @@ use std::net::Ipv4Addr;
 use std::str::FromStr;
 use std::time::Duration;
 
-use crate::constants::BOOTSTRAP_ADDRESS;
+use crate::constants::{BOOTSTRAP_ADDRESS, PORTS};
 use crate::peer::event::Event;
 use crate::traits::peer::{TBuilder, TPeer};
 use anyhow::Result;
@@ -44,10 +44,10 @@ impl TPeer for Bootstrap {
       .with(Protocol::Tcp(self.port));
     self.swarm.listen_on(listen_addr)?;
 
-    for peer in boot_nodes {
+    for (idx, peer) in boot_nodes.iter().enumerate() {
       self.swarm.behaviour_mut().kademlia.add_address(
         &PeerId::from_str(peer)?,
-        format!("{BOOTSTRAP_ADDRESS}/{}", self.port).parse::<Multiaddr>()?,
+        format!("{BOOTSTRAP_ADDRESS}/{}", PORTS[idx]).parse::<Multiaddr>()?,
       );
     }
     let _ = self.swarm.behaviour_mut().kademlia.bootstrap();
