@@ -51,6 +51,7 @@ impl TPeer for Bootstrap {
         &PeerId::from_str(peer)?,
         format!("{BOOTSTRAP_ADDRESS}/{}", PORTS[idx]).parse::<Multiaddr>()?,
       );
+      info!("{peer}");
     }
     match self.swarm.behaviour_mut().kademlia.bootstrap() {
       Ok(_) => info!("bootstrapped!"),
