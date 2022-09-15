@@ -47,58 +47,58 @@ impl TPeer for Peer {
         .with(Protocol::Tcp(0)),
     )?;
 
-    // loop {
-    //   tokio::select! {
-    //     event = self.swarm.select_next_some() => {
-    //       match event {
-    //         SwarmEvent::NewListenAddr { address, .. } => {
-    //           info!("Listening on {:?}", address);
-    //         }
-    //         event => debug!("{:?}", event),
-    //       }
-    //     }
-    //     _ = tokio::time::sleep(Duration::from_secs(1)) => {
-    //       // Likely listening on all interfaces now, thus continuing by breaking the loop.
-    //       break;
-    //     }
-    //   }
-    // }
+    loop {
+      tokio::select! {
+        event = self.swarm.select_next_some() => {
+          match event {
+            SwarmEvent::NewListenAddr { address, .. } => {
+              info!("Listening on {:?}", address);
+            }
+            event => debug!("{:?}", event),
+          }
+        }
+        _ = tokio::time::sleep(Duration::from_secs(1)) => {
+          // Likely listening on all interfaces now, thus continuing by breaking the loop.
+          break;
+        }
+      }
+    }
 
-    // let dial_addr = format!("{}/p2p/{}", BOOTSTRAP_ADDRESS, BOOTNODES[0]).parse::<Multiaddr>()?;
-    // info!("Dial addr: {dial_addr}");
-    // self.swarm.dial(dial_addr.clone())?;
-    // let mut learned_observed_addr = false;
-    // let mut told_relay_observed_addr = false;
+    let dial_addr = format!("{}/p2p/{}", BOOTSTRAP_ADDRESS, BOOTNODES[0]).parse::<Multiaddr>()?;
+    info!("Dial addr: {dial_addr}");
+    self.swarm.dial(dial_addr.clone())?;
+    let mut learned_observed_addr = false;
+    let mut told_relay_observed_addr = false;
 
-    // loop {
-    //   match self.swarm.select_next_some().await {
-    //     SwarmEvent::NewListenAddr { .. } => {}
-    //     SwarmEvent::Dialing { .. } => {}
-    //     SwarmEvent::ConnectionEstablished { .. } => {}
-    //     SwarmEvent::Behaviour(Event::Ping(_)) => {}
-    //     SwarmEvent::Behaviour(Event::Identify(IdentifyEvent::Sent { .. })) => {
-    //       info!("Told relay its public address.");
-    //       told_relay_observed_addr = true;
-    //     }
-    //     SwarmEvent::Behaviour(Event::Identify(IdentifyEvent::Received {
-    //       info: IdentifyInfo { observed_addr, .. },
-    //       ..
-    //     })) => {
-    //       info!("Relay told us our public address: {:?}", observed_addr);
-    //       learned_observed_addr = true;
-    //     }
-    //     event => debug!("{:?}", event),
-    //   }
+    loop {
+      match self.swarm.select_next_some().await {
+        SwarmEvent::NewListenAddr { .. } => {}
+        SwarmEvent::Dialing { .. } => {}
+        SwarmEvent::ConnectionEstablished { .. } => {}
+        SwarmEvent::Behaviour(Event::Ping(_)) => {}
+        SwarmEvent::Behaviour(Event::Identify(IdentifyEvent::Sent { .. })) => {
+          info!("Told relay its public address.");
+          told_relay_observed_addr = true;
+        }
+        SwarmEvent::Behaviour(Event::Identify(IdentifyEvent::Received {
+          info: IdentifyInfo { observed_addr, .. },
+          ..
+        })) => {
+          info!("Relay told us our public address: {:?}", observed_addr);
+          learned_observed_addr = true;
+        }
+        event => debug!("{:?}", event),
+      }
 
-    //   if learned_observed_addr && told_relay_observed_addr {
-    //     break;
-    //   }
-    // }
+      if learned_observed_addr && told_relay_observed_addr {
+        break;
+      }
+    }
 
-    // self
-    //   .swarm
-    //   .listen_on(dial_addr.with(Protocol::P2pCircuit))
-    //   .unwrap();
+    self
+      .swarm
+      .listen_on(dial_addr.with(Protocol::P2pCircuit))
+      .unwrap();
 
     for (idx, peer) in BOOTNODES.iter().enumerate() {
       self.swarm.behaviour_mut().kademlia.add_address(
