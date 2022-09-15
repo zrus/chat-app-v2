@@ -6,14 +6,12 @@ pub const LOG_DEBUG_PATTERN: &str =
 
 // BOOTSTRAP CONSTANTS
 // *TODO: move to config file
-pub const BOOTSTRAP_ADDRESS: &str = "/ip4/3.19.56.240/tcp/4003";
-pub const BOOTNODES: &[&str] = &["12D3KooWDfVV2caaXhXPsZti1wyZPtBj7kckpQ62oSCS3vxJuzyY"];
-
-// DEFAULT BOOTNODES
-pub const PUBLIC_BOOTNODES: &[&str] = &[
-  "QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN",
-  "QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa",
-  "QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb",
-  "QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt",
+pub const BOOTSTRAP_ADDRESS: &str = "/ip4/3.19.56.240/tcp/";
+pub const BOOTNODES: &[&str] = &[
+  "12D3KooWERHN2kX14rZBbCkKnLKdDzbQfFjA8NUTvHANSmsqbacA",
+  "12D3KooWDfVV2caaXhXPsZti1wyZPtBj7kckpQ62oSCS3vxJuzyY",
+  "12D3KooWMDoD3xyLF7g4N3a2krrBhW4gBuJ9TZaJ2vUVA5rmfFXt",
+  "12D3KooWACdDu7PiwBBukn58ZSjmMKucbB1KvuYPGStzihqSkJVs",
 ];
-pub const PUBLIC_BOOT_ADDR: &str = "/dnsaddr/bootstrap.libp2p.io";
+pub const KEY_SEEDS: &[u8] = &[89, 134, 189, 234];
+pub const PORTS: &[u16] = &[4003, 4043, 4344, 4443];

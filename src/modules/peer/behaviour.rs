@@ -17,7 +17,7 @@ pub struct PeerBehaviour {
   pub dcutr: dcutr::behaviour::Behaviour,
   pub kademlia: Kademlia<MemoryStore>,
   pub gossipsub: Gossipsub,
-  // pub mdns: TokioMdns,
+  pub mdns: TokioMdns,
 }
 
 #[derive(NetworkBehaviour)]

@@ -23,10 +23,10 @@ use libp2p::tcp::{GenTcpConfig, TokioTcpTransport};
 use libp2p::Multiaddr;
 use libp2p::PeerId;
 use libp2p::Transport;
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 use tokio::io::AsyncBufReadExt;
 
-use crate::constants::{BOOTSTRAP_ADDRESS, BOOTNODES};
+use crate::constants::{BOOTNODES, BOOTSTRAP_ADDRESS, PORTS};
 use crate::modules::peer::event::Event;
 use crate::traits::peer::{TBuilder, TPeer};
 
@@ -40,70 +40,70 @@ pub struct Peer {
 
 #[async_trait]
 impl TPeer for Peer {
-  async fn run(&mut self) -> Result<()> {
+  async fn run(&mut self, _: &[&str]) -> Result<()> {
     self.swarm.listen_on(
       Multiaddr::empty()
         .with("0.0.0.0".parse::<Ipv4Addr>().unwrap().into())
         .with(Protocol::Tcp(0)),
     )?;
 
-    loop {
-      tokio::select! {
-        event = self.swarm.select_next_some() => {
-          match event {
-            SwarmEvent::NewListenAddr { address, .. } => {
-              info!("Listening on {:?}", address);
-            }
-            event => debug!("{:?}", event),
-          }
-        }
-        _ = tokio::time::sleep(Duration::from_secs(1)) => {
-          // Likely listening on all interfaces now, thus continuing by breaking the loop.
-          break;
-        }
-      }
-    }
+    // loop {
+    //   tokio::select! {
+    //     event = self.swarm.select_next_some() => {
+    //       match event {
+    //         SwarmEvent::NewListenAddr { address, .. } => {
+    //           info!("Listening on {:?}", address);
+    //         }
+    //         event => debug!("{:?}", event),
+    //       }
+    //     }
+    //     _ = tokio::time::sleep(Duration::from_secs(1)) => {
+    //       // Likely listening on all interfaces now, thus continuing by breaking the loop.
+    //       break;
+    //     }
+    //   }
+    // }
 
-    let dial_addr = format!("{}/p2p/{}", BOOTSTRAP_ADDRESS, BOOTNODES[0]).parse::<Multiaddr>()?;
-    info!("Dial addr: {dial_addr}");
-    self.swarm.dial(dial_addr.clone())?;
-    let mut learned_observed_addr = false;
-    let mut told_relay_observed_addr = false;
+    // let dial_addr = format!("{}/p2p/{}", BOOTSTRAP_ADDRESS, BOOTNODES[0]).parse::<Multiaddr>()?;
+    // info!("Dial addr: {dial_addr}");
+    // self.swarm.dial(dial_addr.clone())?;
+    // let mut learned_observed_addr = false;
+    // let mut told_relay_observed_addr = false;
 
-    loop {
-      match self.swarm.select_next_some().await {
-        SwarmEvent::NewListenAddr { .. } => {}
-        SwarmEvent::Dialing { .. } => {}
-        SwarmEvent::ConnectionEstablished { .. } => {}
-        SwarmEvent::Behaviour(Event::Ping(_)) => {}
-        SwarmEvent::Behaviour(Event::Identify(IdentifyEvent::Sent { .. })) => {
-          info!("Told relay its public address.");
-          told_relay_observed_addr = true;
-        }
-        SwarmEvent::Behaviour(Event::Identify(IdentifyEvent::Received {
-          info: IdentifyInfo { observed_addr, .. },
-          ..
-        })) => {
-          info!("Relay told us our public address: {:?}", observed_addr);
-          learned_observed_addr = true;
-        }
-        event => debug!("{:?}", event),
-      }
+    // loop {
+    //   match self.swarm.select_next_some().await {
+    //     SwarmEvent::NewListenAddr { .. } => {}
+    //     SwarmEvent::Dialing { .. } => {}
+    //     SwarmEvent::ConnectionEstablished { .. } => {}
+    //     SwarmEvent::Behaviour(Event::Ping(_)) => {}
+    //     SwarmEvent::Behaviour(Event::Identify(IdentifyEvent::Sent { .. })) => {
+    //       info!("Told relay its public address.");
+    //       told_relay_observed_addr = true;
+    //     }
+    //     SwarmEvent::Behaviour(Event::Identify(IdentifyEvent::Received {
+    //       info: IdentifyInfo { observed_addr, .. },
+    //       ..
+    //     })) => {
+    //       info!("Relay told us our public address: {:?}", observed_addr);
+    //       learned_observed_addr = true;
+    //     }
+    //     event => debug!("{:?}", event),
+    //   }
 
-      if learned_observed_addr && told_relay_observed_addr {
-        break;
-      }
-    }
+    //   if learned_observed_addr && told_relay_observed_addr {
+    //     break;
+    //   }
+    // }
 
-    self
-      .swarm
-      .listen_on(dial_addr.with(Protocol::P2pCircuit))
-      .unwrap();
+    // self
+    //   .swarm
+    //   .listen_on(dial_addr.with(Protocol::P2pCircuit))
+    //   .unwrap();
 
-    for peer in BOOTNODES {
+    for (idx, peer) in BOOTNODES.iter().enumerate() {
       self.swarm.behaviour_mut().kademlia.add_address(
         &PeerId::from_str(peer)?,
-        BOOTSTRAP_ADDRESS.parse::<Multiaddr>()?,
+        format!("{BOOTSTRAP_ADDRESS}/{}", PORTS[idx]).parse::<Multiaddr>()?,
       );
     }
 
@@ -134,23 +134,23 @@ impl TPeer for Peer {
             SwarmEvent::NewListenAddr { address, .. } => {
               info!("Listening on {:?}", address);
             }
-            // SwarmEvent::Behaviour(Event::Mdns(event)) => {
-            //   debug!("{event:?}");
-            //   match event {
-            //     MdnsEvent::Discovered(list) => {
-            //       for (peer, _) in list {
-            //         self.swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer);
-            //       }
-            //     }
-            //     MdnsEvent::Expired(list) => {
-            //       for (peer, _) in list {
-            //         if !self.swarm.behaviour().mdns.has_node(&peer) {
-            //           self.swarm.behaviour_mut().gossipsub.remove_explicit_peer(&peer);
-            //         }
-            //       }
-            //     }
-            //   }
-            // },
+            SwarmEvent::Behaviour(Event::Mdns(event)) => {
+              debug!("{event:?}");
+              match event {
+                MdnsEvent::Discovered(list) => {
+                  for (peer, _) in list {
+                    self.swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer);
+                  }
+                }
+                MdnsEvent::Expired(list) => {
+                  for (peer, _) in list {
+                    if !self.swarm.behaviour().mdns.has_node(&peer) {
+                      self.swarm.behaviour_mut().gossipsub.remove_explicit_peer(&peer);
+                    }
+                  }
+                }
+              }
+            },
             SwarmEvent::Behaviour(Event::Client(client::Event::ReservationReqAccepted {
                 ..
             })) => {
@@ -214,21 +214,25 @@ pub struct PeerBuilder {
 }
 
 impl PeerBuilder {
-  pub fn local_key(mut self) -> Box<dyn TBuilder> {
+  pub fn local_key(mut self) -> Self {
     self.local_key = Some(Keypair::generate_ed25519());
     self.local_peer_id = Some(PeerId::from(&self.local_key.as_ref().unwrap().public()));
-    Box::new(self)
+    self
   }
 
-  pub fn local_key_with_seed(mut self, seed: u8) -> Box<dyn TBuilder> {
+  pub fn local_key_with_seed(mut self, seed: u8) -> Self {
     self.local_key = Some(generate_ed25519(seed));
     self.local_peer_id = Some(PeerId::from(&self.local_key.as_ref().unwrap().public()));
-    Box::new(self)
+    self
   }
 }
 
 #[async_trait]
 impl TBuilder for PeerBuilder {
+  fn boxed(self) -> Box<dyn TBuilder> {
+    Box::new(self)
+  }
+
   async fn build(&self) -> Result<Box<dyn TPeer>> {
     let local_key = self.local_key.as_ref().unwrap();
     let local_peer_id = self.local_peer_id.unwrap();
@@ -256,7 +260,7 @@ impl TBuilder for PeerBuilder {
     let topic = gossipsub::IdentTopic::new("chat");
 
     // Set mDNS
-    // let mdns = TokioMdns::new(Default::default()).await?;
+    let mdns = TokioMdns::new(Default::default()).await?;
 
     // Set a custom gossipsub
     let gossipsub_config = gossipsub::GossipsubConfigBuilder::default()
@@ -297,7 +301,7 @@ impl TBuilder for PeerBuilder {
       )),
       dcutr: dcutr::behaviour::Behaviour::new(),
       gossipsub,
-      // mdns,
+      mdns,
       kademlia,
     };
 

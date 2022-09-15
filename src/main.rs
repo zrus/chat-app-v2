@@ -2,13 +2,17 @@ mod constants;
 mod modules;
 
 pub use crate::modules::*;
-use crate::peer::{mode::PeerMode, BootstrapBuilder, PeerBuilder};
+use crate::{
+  constants::{BOOTNODES, KEY_SEEDS, PORTS},
+  peer::{mode::PeerMode, BootstrapBuilder, PeerBuilder},
+};
 
 use anyhow::Result;
 use bastion::prelude::*;
 use clap::Parser;
 use log::debug;
 use logger::FileLoggerSettingBuilder;
+use modules::traits::peer::TBuilder;
 use opts::Opts;
 
 #[tokio::main]
@@ -38,20 +42,37 @@ async fn main() -> Result<()> {
   debug!("{opts:?}");
 
   let peer_buidler = match opts.peer_mode {
-    PeerMode::Peer => match opts.key_seed {
-      Some(seed) => PeerBuilder::default().local_key_with_seed(seed),
-      None => PeerBuilder::default().local_key(),
-    },
-    PeerMode::Bootstrap => match opts.key_seed {
-      Some(seed) => BootstrapBuilder::default().local_key_with_seed(seed),
-      None => BootstrapBuilder::default().local_key(),
-    },
+    PeerMode::Peer => {
+      let builder = match opts.key_seed {
+        Some(seed) => PeerBuilder::default().local_key_with_seed(seed),
+        None => PeerBuilder::default().local_key(),
+      };
+      Vec::from([builder.boxed()])
+    }
+    PeerMode::Bootstrap => {
+      let mut builders = Vec::new();
+
+      for (idx, key) in KEY_SEEDS.iter().enumerate() {
+        builders.push(
+          BootstrapBuilder::default()
+            .local_key_with_seed(*key)
+            .port(PORTS[idx])
+            .boxed(),
+        )
+      }
+
+      builders
+    }
   };
 
-  let mut peer = peer_buidler.build().await?;
-  peer.run().await?;
+  for (idx, builder) in peer_buidler.iter().enumerate() {
+    let mut peer = builder.build().await?;
+    spawn!(async move {
+      peer.run(&BOOTNODES[..idx]).await.expect("peer run failed");
+    });
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+  }
 
-  Bastion::stop();
   Bastion::block_until_stopped();
 
   Ok(())
