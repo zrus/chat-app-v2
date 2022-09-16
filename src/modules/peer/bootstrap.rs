@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use libp2p::core::upgrade;
 use libp2p::dns::DnsConfig;
 use libp2p::futures::StreamExt;
-use libp2p::gossipsub::{self, Gossipsub, GossipsubConfig, MessageAuthenticity, ValidationMode};
+use libp2p::gossipsub::{self, Gossipsub, MessageAuthenticity, ValidationMode};
 use libp2p::identify::{Identify, IdentifyConfig, IdentifyEvent, IdentifyInfo};
 use libp2p::identity::Keypair;
 use libp2p::kad::{store::MemoryStore, Kademlia, KademliaConfig};
@@ -186,12 +186,12 @@ impl TBuilder for BootstrapBuilder {
 
     let gossipsub_config = gossipsub::GossipsubConfigBuilder::default()
       .heartbeat_interval(std::time::Duration::from_secs(10)) // This is set to aid debugging by not cluttering the log space
-      .flood_publish(true)
       .validation_mode(ValidationMode::Strict) // This sets the kind of message validation. The default is Strict (enforce message signing)
       .gossip_lazy(3)
       .mesh_n(3)
       .mesh_n_low(2)
       .mesh_n_high(6)
+      .mesh_outbound_min(1)
       .do_px()
       .build()
       .expect("Valid config");

@@ -18,9 +18,8 @@ use opts::Opts;
 #[tokio::main]
 async fn main() -> Result<()> {
   let opts = Opts::parse();
-  let bastion_cfg = Config::new().hide_backtraces();
 
-  Bastion::init_with(bastion_cfg);
+  Bastion::init();
   Bastion::start();
 
   let file_logger_builder = if opts.file_logging_enabled {
