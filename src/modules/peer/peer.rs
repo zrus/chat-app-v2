@@ -266,6 +266,7 @@ impl TBuilder for PeerBuilder {
     // Set a custom gossipsub
     let gossipsub_config = gossipsub::GossipsubConfigBuilder::default()
       .heartbeat_interval(std::time::Duration::from_secs(10)) // This is set to aid debugging by not cluttering the log space
+      .idle_timeout(Duration::from_secs(30))
       .validation_mode(ValidationMode::Strict) // This sets the kind of message validation. The default is Strict (enforce message signing)
       .build()
       .expect("Valid config");
