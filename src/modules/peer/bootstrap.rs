@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use libp2p::core::upgrade;
 use libp2p::dns::DnsConfig;
 use libp2p::futures::StreamExt;
-use libp2p::gossipsub::{Gossipsub, GossipsubConfig, MessageAuthenticity};
+use libp2p::gossipsub::{self, Gossipsub, GossipsubConfig, MessageAuthenticity, ValidationMode};
 use libp2p::identify::{Identify, IdentifyConfig, IdentifyEvent, IdentifyInfo};
 use libp2p::identity::Keypair;
 use libp2p::kad::{store::MemoryStore, Kademlia, KademliaConfig};
@@ -184,11 +184,23 @@ impl TBuilder for BootstrapBuilder {
     let store = MemoryStore::new(local_peer_id);
     let kademlia = Kademlia::with_config(local_peer_id, store, config);
 
+    let gossipsub_config = gossipsub::GossipsubConfigBuilder::default()
+      .heartbeat_interval(std::time::Duration::from_secs(10)) // This is set to aid debugging by not cluttering the log space
+      .flood_publish(true)
+      .validation_mode(ValidationMode::Strict) // This sets the kind of message validation. The default is Strict (enforce message signing)
+      .gossip_lazy(3)
+      .mesh_n(3)
+      .mesh_n_low(2)
+      .mesh_n_high(6)
+      .do_px()
+      .build()
+      .expect("Valid config");
+
     let gossipsub = Gossipsub::new(
       MessageAuthenticity::Signed(local_key.clone()),
-      GossipsubConfig::default(),
+      gossipsub_config,
     )
-    .expect("Valid config");
+    .expect("Correct configuration");
 
     let behaviour = BootstrapBehaviour {
       relay: Relay::new(PeerId::from(local_key.public()), Default::default()),

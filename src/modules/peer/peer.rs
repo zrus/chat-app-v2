@@ -64,7 +64,8 @@ impl TPeer for Peer {
       }
     }
 
-    let dial_addr = format!("{}/4003/p2p/{}", BOOTSTRAP_ADDRESS, BOOTNODES[0]).parse::<Multiaddr>()?;
+    let dial_addr =
+      format!("{}/4003/p2p/{}", BOOTSTRAP_ADDRESS, BOOTNODES[0]).parse::<Multiaddr>()?;
     info!("Dial addr: {dial_addr}");
     self.swarm.dial(dial_addr.clone())?;
     let mut learned_observed_addr = false;
@@ -266,8 +267,12 @@ impl TBuilder for PeerBuilder {
     let gossipsub_config = gossipsub::GossipsubConfigBuilder::default()
       .heartbeat_interval(std::time::Duration::from_secs(10)) // This is set to aid debugging by not cluttering the log space
       .flood_publish(true)
-      .support_floodsub()
       .validation_mode(ValidationMode::Strict) // This sets the kind of message validation. The default is Strict (enforce message signing)
+      .gossip_lazy(3)
+      .mesh_n(3)
+      .mesh_n_low(2)
+      .mesh_n_high(6)
+      .do_px()
       .build()
       .expect("Valid config");
 
