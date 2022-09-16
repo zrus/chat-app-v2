@@ -30,4 +30,7 @@ pub struct Opts {
   /// Key seed.
   #[clap(long)]
   pub key_seed: Option<u8>,
+  /// Number of boot node.
+  #[clap(long, short, default_value = "4")]
+  pub number_of_boot_node: usize,
 }

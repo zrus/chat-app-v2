@@ -52,10 +52,10 @@ async fn main() -> Result<()> {
     PeerMode::Bootstrap => {
       let mut builders = Vec::new();
 
-      for (idx, key) in KEY_SEEDS.iter().enumerate() {
+      for idx in 0..opts.number_of_boot_node {
         builders.push(
           BootstrapBuilder::default()
-            .local_key_with_seed(*key)
+            .local_key_with_seed(KEY_SEEDS[idx])
             .port(PORTS[idx])
             .boxed(),
         )
